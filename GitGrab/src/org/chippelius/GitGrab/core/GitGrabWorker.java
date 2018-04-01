@@ -31,7 +31,9 @@ public class GitGrabWorker {
 	// Constructors
 	// ******************************
 	/**
-	 * Creates a GitGrabWorker object for performing the task defined in grab using the given UI.
+	 * Creates a GitGrabWorker object for performing the task defined in grab using the given UI.<br>
+	 * Note that the GitGrab object not used directly but cloned, so it can't be accessed (and by that also modified) 
+	 * from outside after the GitGrabWorker is set up.
 	 * 
 	 * @param config defines the task and its parameters
 	 * @param ui the ui used for IO interactions
@@ -57,8 +59,16 @@ public class GitGrabWorker {
 	// ******************************
 	// Public methods
 	// ******************************
+	public void start() {
+		ui.init();
+		if(grab.isActionModeDefined()) {
+			
+		}
+		//TODO
+	}
+	
 	public static void main(String[] args) {
-		
+		//TODO
 	}
 
 }

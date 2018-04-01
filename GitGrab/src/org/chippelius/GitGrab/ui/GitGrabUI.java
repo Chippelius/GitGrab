@@ -7,6 +7,8 @@ package org.chippelius.GitGrab.ui;
  *
  */
 public interface GitGrabUI {
+
+	public void init();
 	
 	
 	

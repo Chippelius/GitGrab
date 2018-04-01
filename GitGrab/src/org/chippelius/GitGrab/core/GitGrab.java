@@ -47,6 +47,8 @@ public class GitGrab implements Cloneable {
 	private String asset;
 	private boolean directoryDefined;
 	private String directory;
+	private boolean allowOverrideDefined;
+	private boolean allowOverride;
 
 
 
@@ -61,12 +63,13 @@ public class GitGrab implements Cloneable {
 	 * @see GitGrabWorker
 	 */
 	public GitGrab() {
-		this(null, null, null, true, null, null, null);
+		this(null, null, null, true, null, null, null, false);
 		this.useLatestDefined = false;
+		this.allowOverrideDefined = false;
 	}
 
 	/**
-	 * Creates a GitGrab object with empty variables.
+	 * Creates a GitGrab object with the given values for variables.
 	 * GitGrab objects define a task to be performed by the GitGrab worker.
 	 * 
 	 * @param actionMode the type of action to be performed
@@ -76,10 +79,11 @@ public class GitGrab implements Cloneable {
 	 * @param version the version, that will be used if useLatest == false
 	 * @param asset a name or regex to identify the requested package
 	 * @param directory the directory, at which the package will be installed
+	 * @param allowOverride whether files can be overridden without asking the user for permission
 	 * 
 	 * @see GitGrabWorker
 	 */
-	public GitGrab(String actionMode, String owner, String repo, boolean useLatest, String version, String asset, String directory) {
+	public GitGrab(String actionMode, String owner, String repo, boolean useLatest, String version, String asset, String directory, boolean allowOverride) {
 		super();
 		setActionMode(actionMode);
 		setOwner(owner);
@@ -89,6 +93,7 @@ public class GitGrab implements Cloneable {
 		setVersion(version);
 		setAsset(asset);
 		setDirectory(directory);
+		setAllowOverride(allowOverride);
 	}
 
 
@@ -148,11 +153,8 @@ public class GitGrab implements Cloneable {
 	}
 	/**
 	 * Sets the type of action to be performed.<br>
-	 * If the argument is one of: <br>
-	 * {@link #INSTALLATION_MODE} or <br>
-	 * {@link #UPDATE_MODE}<br>
-	 * the action mode will be set accordingly and marked as defined, 
-	 * otherwise set to null and marked as undefined.
+	 * The argument must be one of the following: <br>
+	 * {@link #INSTALLATION_MODE} or {@link #UPDATE_MODE}
 	 * 
 	 * @param mode the type of action to be performed
 	 */
@@ -161,8 +163,8 @@ public class GitGrab implements Cloneable {
 			actionMode = mode;
 			actionModeDefined = true;
 		} else {
-			actionMode = null;
-			actionModeDefined = false;
+			throw new IllegalArgumentException("The action mode must be GitGrab.INSTALLATION_MODE (\""+INSTALLATION_MODE+"\") "
+					+ "or GitGrab.UPDATE_MODE (\""+UPDATE_MODE+"\").");
 		}
 	}
 
@@ -347,7 +349,7 @@ public class GitGrab implements Cloneable {
 	 * 
 	 * @return whether the version is defined
 	 */
-	public boolean isVersionDefined() {
+	public synchronized boolean isVersionDefined() {
 		return versionDefined;
 	}
 	/**
@@ -356,7 +358,7 @@ public class GitGrab implements Cloneable {
 	 * 
 	 * @param defined whether the version should be marked as defined
 	 */
-	public void setVersionDefined(boolean defined) {
+	public synchronized void setVersionDefined(boolean defined) {
 		if(!defined) {
 			versionDefined = false;
 		} else {
@@ -494,6 +496,42 @@ public class GitGrab implements Cloneable {
 		}
 	}
 
+
+	/**
+	 * Returns whether allowOverride is defined.
+	 * 
+	 * @return whether allowOverride is defined
+	 */
+	public boolean isAllowOverrideDefined() {
+		return allowOverrideDefined;
+	}
+	/**
+	 * Marks allowOverride as defined/undefined.
+	 * 
+	 * @param allowOverrideDefined whether allowOverride should be marked as defined
+	 */
+	public void setAllowOverrideDefined(boolean defined) {
+		allowOverrideDefined = defined;
+	}
+	/**
+	 * Returns whether files, that already exist in the destination folder, can be deleted/altered without asking the user for permission.<br>
+	 * This is only relevant in installation mode, as the sole purpose of update mode IS to alter existing files (and create new ones).
+	 * 
+	 * @return whether files can be overridden without asking the user for permission
+	 */
+	public boolean isAllowOverride() {
+		return allowOverride;
+	}
+	/**
+	 * Returns whether files, that already exist in the destination folder, can be deleted/altered without asking the user for permission.<br>
+	 * This is only relevant in installation mode, as the sole purpose of update mode IS to alter existing files (and create new ones).
+	 * 
+	 * @param allowOverride whether files should be overridden without asking the user for permission
+	 */
+	public void setAllowOverride(boolean allowOverride) {
+		this.allowOverride = allowOverride;
+	}
+	
 
 	@Override
 	public synchronized GitGrab clone() {
