@@ -112,6 +112,10 @@ public class GitGrab implements Cloneable {
 		}
 	}
 
+	protected static boolean isValidStringArgument(String argument) {
+		return (argument != null) && (!argument.equals(""));
+	}
+
 
 
 
@@ -131,8 +135,9 @@ public class GitGrab implements Cloneable {
 	 * Can only be marked as defined if {@link #getActionMode()} is a valid action mode.
 	 * 
 	 * @param defined whether the action mode should be marked as defined
+	 * @return whether the action mode is marked as defined now
 	 */
-	public synchronized void setActionModeDefined(boolean defined) {
+	public synchronized boolean setActionModeDefined(boolean defined) {
 		if(!defined) {
 			actionModeDefined = false;
 		} else {
@@ -142,6 +147,7 @@ public class GitGrab implements Cloneable {
 				actionModeDefined = false;
 			}
 		}
+		return actionModeDefined;
 	}
 	/**
 	 * Returns the type of action to be performed.
@@ -157,15 +163,11 @@ public class GitGrab implements Cloneable {
 	 * {@link #INSTALLATION_MODE} or {@link #UPDATE_MODE}
 	 * 
 	 * @param mode the type of action to be performed
+	 * @return whether the argument was valid
 	 */
-	public synchronized void setActionMode(String mode) {
-		if(isValidActionMode(mode)) {
-			actionMode = mode;
-			actionModeDefined = true;
-		} else {
-			throw new IllegalArgumentException("The action mode must be GitGrab.INSTALLATION_MODE (\""+INSTALLATION_MODE+"\") "
-					+ "or GitGrab.UPDATE_MODE (\""+UPDATE_MODE+"\").");
-		}
+	public synchronized boolean setActionMode(String mode) {
+		actionMode = mode;
+		return setActionModeDefined(true);
 	}
 
 
@@ -182,17 +184,19 @@ public class GitGrab implements Cloneable {
 	 * Can only be marked as defined if {@link #getOwner()} is not null or empty.
 	 * 
 	 * @param defined whether the repository's owner should be marked as defined
+	 * @return whether the repository's owner is marked as defined now
 	 */
-	public synchronized void setOwnerDefined(boolean defined) {
+	public synchronized boolean setOwnerDefined(boolean defined) {
 		if(!defined) {
 			ownerDefined = false;
 		} else {
-			if(owner != null && !owner.equals("")) {
+			if(isValidStringArgument(owner)) {
 				ownerDefined = true;
 			} else {
 				ownerDefined = false;
 			}
 		}
+		return ownerDefined;
 	}
 	/**
 	 * Returns the owner of the referred repository.
@@ -205,18 +209,14 @@ public class GitGrab implements Cloneable {
 	/**
 	 * Sets the owner of the referred repository.<br>
 	 * If the argument is not null or empty, the repository owner will be set accordingly and marked as defined, 
-	 * otherwise set to null and marked as undefined.
+	 * otherwise and marked as undefined.
 	 * 
 	 * @param owner the owner to set
+	 * @return whether the argument was valid
 	 */
-	public synchronized void setOwner(String owner) {
-		if(owner != null && !owner.equals("")) {
-			this.owner = owner;
-			ownerDefined = true;
-		} else {
-			this.owner = null;
-			ownerDefined = false;
-		}
+	public synchronized boolean setOwner(String owner) {
+		this.owner = owner;
+		return setOwnerDefined(true);
 	}
 
 
@@ -307,8 +307,8 @@ public class GitGrab implements Cloneable {
 		useLatestDefined = true;
 	}
 
-/*
-	*//**
+	/*
+	 *//**
 	 * Returns whether allowPrerelease is defined.
 	 * 
 	 * @return whether allowPrerelease is defined
@@ -316,28 +316,28 @@ public class GitGrab implements Cloneable {
 	public synchronized boolean isAllowPrereleaseDefined() {
 		return allowPrereleaseDefined;
 	}
-	*//**
-	 * Marks allowPrerelease as defined/undefined.
-	 * 
-	 * @param defined whether allowPrerelease should be marked as defined
-	 *//*
+	  *//**
+	  * Marks allowPrerelease as defined/undefined.
+	  * 
+	  * @param defined whether allowPrerelease should be marked as defined
+	  *//*
 	public synchronized void setAllowPrereleaseDefined(boolean defined) {
 		allowPrereleaseDefined = defined;
 	}
-	*//**
-	 * Returns whether draft releases and prereleases should be considered. (Only relevant if {@link #getUseLatest()} == true.)
-	 * 
-	 * @return whether draft releases and prereleases should be considered
-	 *//*
+	   *//**
+	   * Returns whether draft releases and prereleases should be considered. (Only relevant if {@link #getUseLatest()} == true.)
+	   * 
+	   * @return whether draft releases and prereleases should be considered
+	   *//*
 	public boolean getAllowPrerelease() {
 		return allowPrerelease;
 	}
-	*//**
-	 * Sets whether draft releases and prereleases should be considered. (Only relevant if {@link #getUseLatest()} == true.)<br>
-	 * Marks allowPrerelease as defined.
-	 * 
-	 * @param allowPrerelease whether draft releases and prereleases should be considered
-	 *//*
+	    *//**
+	    * Sets whether draft releases and prereleases should be considered. (Only relevant if {@link #getUseLatest()} == true.)<br>
+	    * Marks allowPrerelease as defined.
+	    * 
+	    * @param allowPrerelease whether draft releases and prereleases should be considered
+	    *//*
 	public void setAllowPrerelease(boolean allowPrerelease) {
 		this.allowPrerelease = allowPrerelease;
 		allowPrereleaseDefined = true;
@@ -531,7 +531,7 @@ public class GitGrab implements Cloneable {
 	public void setAllowOverride(boolean allowOverride) {
 		this.allowOverride = allowOverride;
 	}
-	
+
 
 	@Override
 	public synchronized GitGrab clone() {
