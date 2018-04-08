@@ -89,7 +89,7 @@ public class GitGrab implements Cloneable {
 		setOwner(owner);
 		setRepo(repo);
 		setUseLatest(useLatest);
-		/*setAllowPrerelease(allowPrerelease);*/
+		/*setAllowPrerelease(allowPrerelease);*/ 
 		setVersion(version);
 		setAsset(asset);
 		setDirectory(directory);
