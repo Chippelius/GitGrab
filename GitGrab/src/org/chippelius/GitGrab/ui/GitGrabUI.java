@@ -10,8 +10,6 @@ public interface GitGrabUI {
 
 	public void init();
 
-	public String requestStringArgument(int argrument, String currentValue);
-	
 	
 	
 }
