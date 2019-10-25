@@ -8,8 +8,22 @@ package org.chippelius.GitGrab.ui;
  */
 public interface GitGrabUI {
 
-	public void init();
+	public Object init();
 
+	public String requestRepoOwner();
+
+	public String requestRepoName();
+
+	public String requestVersion();
+
+	public String requestAsset();
+
+	public String requestDestination();
+
+	public Object confirmInstallation();
 	
-	
+	public Boolean confirmOverride();
+
+	public void showException(String string, Exception e);
+
 }

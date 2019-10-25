@@ -18,32 +18,32 @@ import net.lingala.zip4j.core.ZipFile;
  * @author Leo Köberlein
  */
 public class GitGrab {
-	
+
 	// ******************************
 	// Constants
 	// ******************************
 	private static final String latestVersion = "latest";
-	
-	
+
+
 
 
 	// ******************************
 	// Fields
 	// ******************************
 	protected GitGrabUI ui;
-//	protected volatile boolean abort;
-	protected String repoOwner, repoName, version, asset, destination;
-	protected boolean override;
+	//	protected volatile boolean abort;
+	protected String repoOwner, repoName, version, asset, destination = null;
+	protected Boolean override = null;
 
 
 
 	// ******************************
 	// Constructors
 	// ******************************
-	
 	/**
-	 * Creates a GitGrab object that will use the given UI for displaying progress and requesting missing information.<br>
-	 * The UI is necessary and therefor must not be null!
+	 * Creates a GitGrab object that will use the given UI for displaying progress 
+	 * and requesting missing information.<br>
+	 * The UI is necessary and therefore must not be null!
 	 * 
 	 * @param ui the ui used for IO interactions with the user
 	 * 
@@ -60,7 +60,7 @@ public class GitGrab {
 
 
 	// ******************************
-	// Private methods
+	// Protected methods
 	// ******************************
 	protected static URLConnection getURLConnection(String url) throws IOException {
 		URL u = new URL(url);
@@ -69,7 +69,18 @@ public class GitGrab {
 		uc.setRequestProperty("Accept", "application/vnd.github.v3+json");
 		return uc;
 	}
-	
+
+	protected static void download(String url, File assetFile) throws IOException {
+		URLConnection downloadConnection = getURLConnection(url);
+		downloadConnection.setRequestProperty("Accept", "application/octet-stream");
+		InputStream in = downloadConnection.getInputStream();
+		FileOutputStream fos = new FileOutputStream(assetFile, false);
+		byte[] buffer = new byte[1024];
+		for(int count=0;(count=in.read(buffer)) > -1; fos.write(buffer, 0, count));
+		in.close();
+		fos.close();
+	}
+
 	protected static void delete(File file) {
 		if(file.exists()) {
 			if(file.isDirectory()) {
@@ -80,39 +91,21 @@ public class GitGrab {
 			file.delete();
 		}
 	}
-	
-/*
-	private String getPackageURL(String owner, String repo, String version, String asset) throws Exception {
-		StringBuilder sb = new StringBuilder();
-		URL url = new URL("https://api.github.com/repos/"+owner+"/"+repo+"/releases/"+version);
-		URLConnection uc = url.openConnection();
-		uc.connect();
-		BufferedReader br = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		for(String s; (s = br.readLine()) != null; sb.append(s)) {System.out.print(s);}
-		String res = sb.toString();
-		int assetsIndex = res.indexOf("\"assets\"");
-		if(assetsIndex == -1)
-			return null;
 
-		return res;
-	}
-*/
-
-	protected static void unzip(String zipFile, String destinationDirectory) throws Exception {
+	protected static void unzip(File assetFile, String destinationDirectory) throws Exception {
 		//TODO: redo without dependency
-		ZipFile zipfile = new ZipFile(zipFile);
+		ZipFile zipfile = new ZipFile(assetFile);
 		zipfile.extractAll(destinationDirectory);
 	}
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 	// ******************************
 	// Getter and Setter methods
 	// ******************************
-
 	public synchronized String getRepoOwner() {
 		return repoOwner;
 	}
@@ -149,6 +142,9 @@ public class GitGrab {
 		return destination;
 	}
 	public synchronized GitGrab setDestination(String destination) {
+		if(!(destination.charAt(destination.length()-1) == '\\' || 
+				destination.charAt(destination.length()) == '/'))
+			destination = destination + '/';
 		this.destination = destination;
 		return this;
 	}
@@ -167,53 +163,131 @@ public class GitGrab {
 	// ******************************
 	// Public methods
 	// ******************************
-
 	public synchronized void install() throws Exception {
-		JsonReader reader = Json.createReader(getURLConnection("https://api.github.com/repos/"+repoOwner+"/"+repoName+"/releases/"+version).getInputStream());
-		JsonObject root = reader.readObject();
-		JsonArray assets = root.getJsonArray("assets");
-		for(int i=0; i<assets.size(); ++i) {
-			if(assets.getJsonObject(i).getString("name").equals(asset)) {
-				System.out.println("Downloading "+assets.getJsonObject(i).getString("name"));
-				URLConnection downloadConnection = getURLConnection(assets.getJsonObject(i).getString("url"));
-				downloadConnection.setRequestProperty("Accept", "application/octet-stream");
-				InputStream in = downloadConnection.getInputStream();
-				FileOutputStream fos = new FileOutputStream(destination+assets.getJsonObject(i).getString("name"), false);
-				byte[] buffer = new byte[1024];
-				for(int count=0;(count=in.read(buffer)) > -1; fos.write(buffer, 0, count));
-				in.close();
-				fos.close();
-				System.out.println("Download complete.");
-				
-				File destinationFolder = new File(destination);
-				if(destinationFolder.exists()) {
-					if(override) {
-						delete(destinationFolder);
-						destinationFolder.mkdir();
-					} else {
-						System.out.println("Destination already exists!");
-						return;
-					}
-				} else {
-					destinationFolder.mkdirs();
-				}
-				
-				System.out.println("Extracting "+assets.getJsonObject(i).getString("name"));
-				unzip(destination+assets.getJsonObject(i).getString("name"), destination);
-				System.out.println("Extracting complete.");
-				
-				new File(destination+assets.getJsonObject(i).getString("name")).delete();
-				break;
-			}
-		}
-	}
-	
-//	public void abort() {
-//		abort = true;
-//	}
+		if(ui.init() == null)
+			return;
 
-	
-	
+		/* 
+		 * Gather necessary information
+		 */
+		if(repoOwner == null) {
+			repoOwner = ui.requestRepoOwner();
+			if(repoOwner == null)
+				return;
+		}
+		if(repoName == null) {
+			repoName = ui.requestRepoName();
+			if(repoName == null)
+				return;
+		}
+		if(version == null) {
+			version = ui.requestVersion();
+			if(version == null)
+				return;
+		}
+		if(asset == null) {
+			asset = ui.requestAsset();
+			if(asset == null)
+				return;
+		}
+		if(destination == null) {
+			destination = ui.requestDestination();
+			if(destination == null)
+				return;
+		}
+
+		/*
+		 * Gather assets from GitHub
+		 */
+		JsonArray assets;
+		try {
+			JsonReader reader = Json.createReader(getURLConnection(
+					"https://api.github.com/repos/"+repoOwner+"/"+repoName+"/releases/"+version)
+					.getInputStream());
+			JsonObject root = reader.readObject();
+			assets = root.getJsonArray("assets");
+		} catch(Exception e) {
+			ui.showException("An error occurred while gathering necessary data from GitHub", e);
+			throw e;
+		}
+
+		/* 
+		 * Find asset in assets
+		 */
+		JsonObject assetObject = null;
+		try {
+			for(int i=0; i<assets.size()+1; ++i) {
+				if(assets.getJsonObject(i).getString("name").equals(asset)) {
+					assetObject = assets.getJsonObject(i);
+					break;
+				}
+			}
+		} catch (Exception e) {
+			ui.showException("Asset with name \""+asset+"\" could not be found.", e);
+			throw e;
+		}
+		
+		/*
+		 * Wait for user to confirm installation
+		 */
+		if(ui.confirmInstallation() == null)
+			return;
+
+		/* 
+		 * Prepare destination directory
+		 */
+		try {
+			File destinationFolder = new File(destination);
+			if(destinationFolder.exists()) {
+				if(override == null) {
+					override = ui.confirmOverride();
+					if(override == null)
+						return;
+				}
+				if(override) {
+					delete(destinationFolder);
+					destinationFolder.mkdir();
+				} else {
+					throw new IOException("Deleting file not allowed by user");
+				}
+			} else {
+				destinationFolder.mkdirs();
+			}
+		} catch (Exception e) {
+			ui.showException("An error occurred while preparing the destination path", e);
+			throw e;
+		}
+
+		/* 
+		 * Download asset
+		 */
+		File assetFile = new File(destination+assetObject.getString("name"));
+		System.out.println("Downloading "+assetObject.getString("name"));
+		download(assetObject.getString("url"), assetFile);
+		System.out.println("Download complete.");
+
+		/*
+		 * Extract asset
+		 */
+		System.out.println("Extracting "+assetObject.getString("name"));
+		unzip(assetFile, destination);
+		System.out.println("Extracting complete.");
+
+		/*
+		 * Clean up
+		 */
+		System.out.println("Cleaning up.");
+		assetFile.delete();
+		System.out.println("Cleanup done.");
+
+	}
+
+	//	public void abort() {
+	//		abort = true;
+	//	}
+
+
+
 
 	// ******************************
 	// Public static methods
@@ -222,10 +296,6 @@ public class GitGrab {
 	public static void main(String[] args) {
 		try {
 			new GitGrab(new GitGrabUI() {
-				@Override
-				public void init() {
-					// TODO Auto-generated method stub
-				}
 			})
 			.setRepoOwner("atom")
 			.setRepoName("atom")
@@ -235,9 +305,8 @@ public class GitGrab {
 			.setOverride(false)
 			.install();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
+
 }
